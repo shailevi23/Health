@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Blog Setup Instructions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: Consolas, Monaco, 'Andale Mono', monospace;
+        }
+        .step {
+            margin-bottom: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 20px;
+        }
+        .note {
+            background-color: #ffffcc;
+            padding: 10px;
+            border-left: 4px solid #f39c12;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Health Blog Setup Instructions</h1>
+    <p>This document provides instructions for setting up the Health Blog project, including database tables and environment variables.</p>
+
+    <div class="step">
+        <h2>Step 1: Prerequisites</h2>
+        <ul>
+            <li>Node.js (v14 or higher)</li>
+            <li>npm or yarn</li>
+            <li>Supabase account with a project created</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h2>Step 2: Installation</h2>
+        <p>Install the required dependencies:</p>
+        <pre><code>npm install
+npm install ws dotenv</code></pre>
+    </div>
+
+    <div class="step">
+        <h2>Step 3: Environment Variables</h2>
+        <p>Create a <code>.env.local</code> file in the root directory with the following variables:</p>
+        <pre><code>NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key</code></pre>
+        <p>You can find these values in your Supabase project dashboard under Settings > API.</p>
+    </div>
+
+    <div class="step">
+        <h2>Step 4: Database Setup</h2>
+        <p>To set up the required tables for the Health Blog, follow these steps:</p>
+        <ol>
+            <li>Navigate to your Supabase project dashboard</li>
+            <li>Go to the SQL Editor</li>
+            <li>Create a new query and paste the following SQL code:</li>
+        </ol>
+        <pre><code>-- Newsletter Subscribers Table
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT NOT NULL UNIQUE,
+  subscribed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  preferences JSONB DEFAULT '{"articles": true, "recipes": true, "recommendations": true}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION update_newsletter_subscribers_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_newsletter_subscribers_updated_at
+  BEFORE UPDATE ON newsletter_subscribers
+  FOR EACH ROW
+  EXECUTE FUNCTION update_newsletter_subscribers_updated_at();
+
+-- Content Notifications Table
+CREATE TABLE IF NOT EXISTS content_notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  content_type TEXT NOT NULL,
+  content_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  excerpt TEXT,
+  sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Admin Settings Table
+CREATE TABLE IF NOT EXISTS admin_settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  key TEXT NOT NULL UNIQUE,
+  value JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION update_admin_settings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_admin_settings_updated_at
+  BEFORE UPDATE ON admin_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_admin_settings_updated_at();
+
+-- Insert default email settings
+INSERT INTO admin_settings (key, value)
+VALUES (
+  'email_settings',
+  '{"host":"","port":"","secure":false,"user":"","password":"","fromEmail":"","apiKey":""}'::jsonb
+)
+ON CONFLICT (key) DO NOTHING;</code></pre>
+        <p>Execute the SQL query to create the tables.</p>
+    </div>
+
+    <div class="step">
+        <h2>Step 5: Running the Application</h2>
+        <p>Start the development server:</p>
+        <pre><code>npm run dev</code></pre>
+        <p>The application will be available at <a href="http://localhost:3000">http://localhost:3000</a></p>
+    </div>
+
+    <div class="step">
+        <h2>Step 6: Admin Panel</h2>
+        <p>Once the application is running and the database is set up, you can access the admin panel at:</p>
+        <p><a href="http://localhost:3000/admin">http://localhost:3000/admin</a></p>
+        <p>Default credentials:</p>
+        <ul>
+            <li>Username: admin</li>
+            <li>Password: admin</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <h3>Note:</h3>
+        <p>If you encounter any issues during setup:</p>
+        <ol>
+            <li>Check that all environment variables are correctly set</li>
+            <li>Verify that the database tables have been created successfully</li>
+            <li>Make sure all dependencies are installed</li>
+            <li>Check the console for any error messages</li>
+        </ol>
+    </div>
+
+    <div>
+        <h2>Features</h2>
+        <p>The Health Blog includes the following features:</p>
+        <ul>
+            <li>Blog articles with categories and tags</li>
+            <li>Recipe collection with filtering</li>
+            <li>Product recommendations</li>
+            <li>Newsletter subscription system</li>
+            <li>Admin panel for managing content and subscribers</li>
+        </ul>
+        <h3>Admin Panel Features</h3>
+        <ul>
+            <li>Dashboard with subscriber statistics</li>
+            <li>Newsletter management</li>
+            <li>Subscriber management</li>
+            <li>Email settings configuration</li>
+        </ul>
+    </div>
+
+    <p>For more detailed information, refer to the other README files in this project:</p>
+    <ul>
+        <li>README-ADMIN.md - Information about the admin panel</li>
+        <li>README-DATABASE.md - Detailed database schema information</li>
+        <li>README-NEWSLETTER.md - Newsletter system documentation</li>
+    </ul>
+</body>
+</html> 
